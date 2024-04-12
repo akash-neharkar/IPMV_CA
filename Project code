@@ -1,1 +1,110 @@
+import pygame
+import random
 
+# Function to split the image into pieces
+def split_image(image, rows, cols):
+    width, height = image.get_size()
+    piece_width = width // cols
+    piece_height = height // rows
+    pieces = []
+    for y in range(rows):
+        for x in range(cols):
+            rect = pygame.Rect(x * piece_width, y * piece_height, piece_width, piece_height)
+            piece = image.subsurface(rect)
+            pieces.append(piece)
+    return pieces
+
+# Function to shuffle the pieces
+def shuffle_pieces(pieces):
+    shuffled_pieces = pieces[:]
+    random.shuffle(shuffled_pieces)
+    return shuffled_pieces
+
+# Function to check if the puzzle is solved
+def check_solution(pieces, original_pieces):
+    return pieces == original_pieces
+
+def main():
+    pygame.init()
+    screen_width = 800
+    screen_height = 600
+
+    clock = pygame.time.Clock()
+    fps = 30
+
+    levels = [
+        {'image_path': 'bulbasaur.png', 'rows': 3, 'cols': 3, 'max_chances': 10},
+        {'image_path': 'charlizard.png', 'rows': 4, 'cols': 4, 'max_chances': 15},
+        {'image_path': 'charmendar.png', 'rows': 5, 'cols': 5, 'max_chances': 20},
+        # Add more levels with increasing difficulty and max_chances
+    ]
+
+    for level in levels:
+        screen = pygame.display.set_mode((screen_width, screen_height))
+        pygame.display.set_caption('Jigsaw Puzzle')
+
+        original_image = pygame.image.load(level['image_path'])  # Load image for the current level
+        original_image = pygame.transform.scale(original_image, (screen_width, screen_height))
+
+        # Display the image for 2 seconds
+        screen.blit(original_image, (0, 0))
+        pygame.display.flip()
+        pygame.time.delay(2000)  # Delay for 2 seconds
+
+        pieces = split_image(original_image, level['rows'], level['cols'])
+        shuffled_pieces = shuffle_pieces(pieces)
+
+        piece_width = pieces[0].get_width()
+        piece_height = pieces[0].get_height()
+
+        selected_piece = None
+        empty_rect = pygame.Rect(0, 0, piece_width, piece_height)
+        chances = level['max_chances']
+
+        running = True
+        while running:
+            screen.fill((255, 255, 255))
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left mouse button
+                        mouse_x, mouse_y = event.pos
+                        for index, piece in enumerate(shuffled_pieces):
+                            piece_x = (index % level['cols']) * piece_width
+                            piece_y = (index // level['cols']) * piece_height
+                            rect = pygame.Rect(piece_x, piece_y, piece_width, piece_height)
+                            if rect.collidepoint(mouse_x, mouse_y):
+                                selected_piece = index
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1 and chances > 0:  # Left mouse button and chances remaining
+                        if selected_piece is not None:
+                            mouse_x, mouse_y = event.pos
+                            for index, piece in enumerate(shuffled_pieces):
+                                piece_x = (index % level['cols']) * piece_width
+                                piece_y = (index // level['cols']) * piece_height
+                                rect = pygame.Rect(piece_x, piece_y, piece_width, piece_height)
+                                if rect.collidepoint(mouse_x, mouse_y):
+                                    shuffled_pieces[selected_piece], shuffled_pieces[index] = shuffled_pieces[index], shuffled_pieces[selected_piece]
+                                    selected_piece = None
+                                    chances -= 1
+                                    break
+
+            for index, piece in enumerate(shuffled_pieces):
+                piece_x = (index % level['cols']) * piece_width
+                piece_y = (index // level['cols']) * piece_height
+                screen.blit(piece, (piece_x, piece_y))
+
+            pygame.display.set_caption(f'Jigsaw Puzzle | Chances: {chances}')
+            pygame.display.flip()
+            clock.tick(fps)
+
+            if check_solution(shuffled_pieces, pieces) or chances == 0:
+                pygame.time.delay(2000)  # Delay for 2 seconds before moving to the next level or ending the game
+                break
+
+    pygame.quit()
+
+if _name_ == '_main_':
+    main()
